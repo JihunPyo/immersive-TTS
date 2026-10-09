@@ -28,13 +28,15 @@
 - 작업 시작: `git pull`. 다른 컴퓨터로 옮기기 전: 커밋 후 `git push`.
 - 두 곳에서 동시에 같은 파일을 고치지 않는다. 충돌이 나면 사용자에게 먼저 알린다.
 - 커밋과 푸시는 사용자가 요청할 때만 한다. 세션을 마칠 때 푸시 안 된 커밋이 있으면 알려 준다.
-- `data/`, `models/`, 학습 로그·체크포인트는 git에 넣지 않는다(`.gitignore`). 필요하면 rsync로 옮긴다.
+- 서버의 remote는 HTTPS(`https://github.com/...`)다. 연구실 방화벽 때문에 서버에서 GitHub SSH가 막힌 적이 있다. 맥북은 SSH 그대로.
+- `data/`, `models/`, 학습 로그·체크포인트는 git에 넣지 않는다(`.gitignore`). 옮길 때는 맥북 터미널에서 scp를 쓴다. 서버에 rsync가 없다.
   ```bash
-  # 맥북에서 서버로 원본 데이터 보내기 (예시)
-  rsync -avh --progress data/raw/ <서버주소>:immersive-TTS/data/raw/
-  # 서버에서 학습한 모델을 맥북으로 가져오기 (예시)
-  rsync -avh --progress <서버주소>:immersive-TTS/models/<실험명>/ models/<실험명>/
+  # 맥북 → 서버: 원본 데이터 보내기 (<서버>는 맥북 ~/.ssh/config의 호스트 이름)
+  scp -r "data/raw/문서요약 텍스트" <서버>:immersive-TTS/data/raw/
+  # 서버 → 맥북: 학습한 모델 가져오기
+  scp -r <서버>:immersive-TTS/models/<실험명> models/
   ```
+- 공개 다운로드가 되는 데이터(위키문헌 덤프 등)는 옮기지 말고 서버에서 `wget`으로 직접 받는다. 서버에는 curl도 없다.
 
 ### 두 곳에서 똑같이 돌아가는 코드
 
@@ -59,6 +61,13 @@ immersive-tts --help                   # 또는 python -m immersive_tts --help
 
 서버는 연구실 공용이다.
 
+반드시 singularity환경을 활성화 하여 작업을 해야 한다. 명령어는 다음과 같다.    
+
+singularity shell --bind /data:/data --nv ~/torch20_cu118.sif
+
+   source /opt/miniconda3/etc/profile.d/conda.sh
+
+
 - 학습 전 `nvidia-smi`로 빈 GPU를 확인하고 `CUDA_VISIBLE_DEVICES`로 1장만 지정한다. 여러 장은 사용자에게 먼저 묻는다.
 - 오래 걸리는 작업은 `tmux` 안에서 돌린다. SSH가 끊겨도 계속 돈다.
 - 학습 결과는 `models/<실험명>/`에, 로그는 `logs/<실험명>.log`에 남긴다. 실험명은 `날짜_내용` 형식(예: `20261010_koelectra_baseline`).
@@ -81,7 +90,7 @@ models/              학습한 모델 (git 제외)
 
 - 희곡 형식은 규칙으로 먼저 거른다. 분류기는 희곡이 아닌 텍스트에 대해 "LLM을 활용한 목소리 배정이 필요한가"를 이진 분류한다.
 - 모델은 KoELECTRA-small. "필요" 재현율을 우선한다.
-- 원본 데이터 (`data/raw/`, 맥북에 있음, 서버로는 아직 안 옮김):
+- 원본 데이터 (`data/raw/`, 맥북과 서버 모두 있음. 서버에는 논문·특허 중 논문 zip만 옮김):
   - `029.대규모 구매도서 기반 한국어 말뭉치 데이터/` 17GB. zip 번호가 KDC 코드. 810번대 문학(813 소설) → 필요, 그 외 → 불필요
   - `문서요약 텍스트/` 신문기사·사설 → 불필요. 법률은 제외
   - `018.논문자료 요약 데이터/` 논문 → 불필요. 특허는 제외
