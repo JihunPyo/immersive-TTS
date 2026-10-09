@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.DS_Store
+
+# 데이터와 모델은 용량이 커서 git에 올리지 않는다
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+models/
